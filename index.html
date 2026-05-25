@@ -222,9 +222,10 @@ createApp({
                     // GASへ送信
                     await fetch(gasUrl.value, {
                         method: 'POST',
+                        mode: 'cors', // CORS通信であることを明示
+                        redirect: 'follow', // 👈 fetchの正しいオプション位置へ移動
                         body: JSON.stringify({
                             action: 'registerUser',
-                            redirect: 'follow',
                             userId: userId.value,
                             fcmToken: currentToken
                         })
