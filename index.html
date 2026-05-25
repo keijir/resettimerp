@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Token Reset PWA</title>
+    <title>AI Token Reset PWA (FCM)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFJIHRva2VuIFJlc2V0IFRpbWVyIiwKICAic2hvcnRfbmFtZSI6ICJBSVRpbWVyIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwOTEwMTIiLAogICJ0aGVtZV9jb2xvciI6ICIjMTA4YjY2Igp9">
     <style>
-        body { 
-            background-color: #0b0f19; 
-            color: #f3f4f6; 
-            -webkit-tap-highlight-color: transparent; 
-            touch-action: manipulation;
-            user-select: none;
-        }
+        body { background-color: #0b0f19; color: #f3f4f6; -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; }
         button, select, input { touch-action: manipulation; }
         .ghost-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); }
         [v-cloak] { display: none; }
@@ -23,7 +19,6 @@
 <body>
 
 <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col justify-between p-4 pb-24" v-cloak>
-    
     <div v-if="showOnboarding" class="fixed inset-0 z-50 bg-slate-950/95 flex flex-col justify-center items-center p-6 text-center space-y-5">
         <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 text-2xl">🔔</div>
         <h2 class="text-xl font-bold">AI解除通知システム</h2>
@@ -58,25 +53,9 @@
                             <p class="text-[11px] text-emerald-400 font-mono">⏱️ {{ formatAbsoluteTime(timer.targetTime) }} 解除</p>
                         </div>
                         <div class="flex gap-1">
-                            <button @click="openTimeEditor(timer)" class="bg-slate-800 text-xs px-2 py-1 rounded text-amber-400">✏️ 変更</button>
                             <button @click="confirmCancel(timer.id)" class="bg-slate-800 text-xs px-2 py-1 rounded text-rose-400">🗑️ 削除</button>
                         </div>
                     </div>
-
-                    <div v-if="editingTimerId === timer.id" class="bg-slate-950 p-3 rounded-lg space-y-2 border border-amber-500/30 text-xs">
-                        <div class="flex items-center gap-2">
-                            <label class="text-slate-400"><input type="radio" v-model="inlineEditType" value="relative"> 経過時間:</label>
-                            <input type="number" v-model.number="inlineEditMinutes" :disabled="inlineEditType!=='relative'" class="w-16 bg-slate-900 border border-slate-800 p-1 rounded text-white text-center"> <span class="text-slate-400">分後</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <label class="text-slate-400"><input type="radio" v-model="inlineEditType" value="fixed"> 時刻指定:</label>
-                            <input type="time" v-model="inlineEditTimeStr" :disabled="inlineEditType!=='fixed'" class="bg-slate-900 border border-slate-800 p-1 rounded text-white text-center"> <span class="text-slate-400">にリセット</span>
-                        </div>
-                        <div class="flex justify-end gap-2 pt-1">
-                            <button @click="saveInlineTimeChange(timer.id)" class="bg-amber-500 text-slate-950 px-3 py-1 rounded font-bold">確定</button>
-                        </div>
-                    </div>
-
                     <div class="text-xl font-mono font-bold text-slate-100 tracking-wide">{{ timer.timeLeft }}</div>
                     <div class="w-full bg-slate-950 h-1 rounded-full overflow-hidden">
                         <div class="bg-emerald-500 h-full transition-all duration-300" :style="{ width: timer.progress + '%' }"></div>
@@ -128,71 +107,21 @@
                     🔔 テストプッシュ通知を即時送信
                 </button>
             </section>
-
-            <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
-                <h3 class="text-xs font-bold text-white">⚙️ {{ isEditingMode ? '登録ツールの編集' : 'カスタムAIツール登録' }}</h3>
-                <div class="space-y-2 text-xs">
-                    <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">ツール名</label>
-                        <input type="text" v-model="toolForm.name" placeholder="例: Claude Code" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[11px] text-slate-400 mb-1">リセット形式</label>
-                            <select v-model="toolForm.type" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
-                                <option value="relative">経過時間後</option>
-                                <option value="fixed">毎日固定時刻</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label v-if="toolForm.type === 'relative'" class="block text-[11px] text-slate-400 mb-1">周期 (分)</label>
-                            <label v-else class="block text-[11px] text-slate-400 mb-1">時刻</label>
-                            <input v-if="toolForm.type === 'relative'" type="number" v-model.number="toolForm.minutes" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
-                            <input v-else type="time" v-model="toolForm.fixedTime" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
-                        </div>
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button @click="saveToolForm" class="flex-1 bg-emerald-500 text-slate-950 font-bold py-2 rounded-lg">
-                            {{ isEditingMode ? '変更を確定' : '新規追加' }}
-                        </button>
-                        <button v-if="isEditingMode" @click="cancelEditMode" class="bg-slate-800 text-slate-300 px-3 py-2 rounded-lg">中止</button>
-                    </div>
-                </div>
-
-                <div v-if="presets.length > 0" class="pt-3 border-t border-slate-800/60 space-y-1">
-                    <p class="text-[10px] text-slate-500 font-bold mb-1">📋 登録済みツール一覧</p>
-                    <div v-for="p in presets" :key="p.id" class="flex justify-between items-center bg-slate-950/40 p-2 rounded border border-slate-800 text-[11px]">
-                        <span class="text-white font-medium">{{ p.icon || '🤖' }} {{ p.name }} ({{ formatPeriod(p) }})</span>
-                        <div class="flex gap-2">
-                            <button @click="selectPresetForEdit(p)" class="text-amber-400 px-1">✏️</button>
-                            <button @click="deletePreset(p.id)" class="text-rose-400 px-1">🗑️</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </main>
     </div>
 </div>
 
 <script>
-const swCode = `
-self.addEventListener('push', function(event) {
-    let data = { title: '制限解除完了', body: 'AIツールの利用制限が解除されました！' };
-    if (event.data) {
-        try { data = event.data.json(); } catch (e) { data.body = event.data.text(); }
-    }
-    const options = {
-        body: data.body,
-        icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%2310b981"/></svg>',
-        badge: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%2310b981"/></svg>',
-        vibrate: [200, 100, 200]
-    };
-    event.waitUntil(self.registration.showNotification(data.title, options));
-});
-`;
-
-const blob = new Blob([swCode], { type: 'application/javascript' });
-const swUrl = URL.createObjectURL(blob);
+// 1. Firebaseの初期化（露出しても安全な公開情報）
+const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 
 const { createApp, ref, onMounted, computed } = Vue;
 
@@ -203,14 +132,6 @@ createApp({
         const userId = ref('');
         const gasUrl = ref('');
         const notificationStatusText = ref('未連動');
-        
-        const isEditingMode = ref(false);
-        const editingPresetId = ref(null);
-        const editingTimerId = ref(null);
-        
-        const inlineEditType = ref('relative');
-        const inlineEditMinutes = ref(180);
-        const inlineEditTimeStr = ref('12:00');
         const ticker = ref(0);
 
         const presets = ref([
@@ -218,7 +139,6 @@ createApp({
             { id: '2', name: 'Claude 3.5 Sonnet', type: 'relative', minutes: 300, icon: '🧠' }
         ]);
         const activeTimersRaw = ref([]);
-        const toolForm = ref({ name: '', type: 'relative', minutes: 180, fixedTime: '09:00' });
 
         const initSession = async () => {
             let localId = localStorage.getItem('ai_user_id') || 'usr-' + Math.random().toString(36).substring(2, 12);
@@ -226,15 +146,8 @@ createApp({
             userId.value = localId;
             gasUrl.value = localStorage.getItem('ai_gas_url') || '';
 
-            if (localStorage.getItem('ai_presets')) {
-                try {
-                    presets.value = JSON.parse(localStorage.getItem('ai_presets'));
-                } catch(e) { console.error("データ読み込み失敗", e); }
-            }
             if (localStorage.getItem('ai_active_timers')) {
-                try {
-                    activeTimersRaw.value = JSON.parse(localStorage.getItem('ai_active_timers'));
-                } catch(e) { console.error("タイマーデータ読み込み失敗", e); }
+                try { activeTimersRaw.value = JSON.parse(localStorage.getItem('ai_active_timers')); } catch(e) {}
             }
 
             setInterval(() => { ticker.value++; }, 1000);
@@ -243,94 +156,71 @@ createApp({
                 if (Notification.permission === 'default') {
                     showOnboarding.value = true;
                 } else if (Notification.permission === 'granted' && gasUrl.value) {
-                    setupServiceWorkerAndPush();
+                    setupFirebasePush();
                 }
             }
             updateStatusText();
         };
 
         const updateStatusText = () => {
-            if (!gasUrl.value) {
-                notificationStatusText.value = "URL未設定";
-            } else if ('Notification' in window && Notification.permission !== 'granted') {
-                notificationStatusText.value = "通知未許可";
-            } else if (localStorage.getItem('ai_sw_linked') === 'true') {
-                notificationStatusText.value = "PWAバックグラウンド通信稼働中";
-            } else {
-                notificationStatusText.value = "URL保存完了（未同期）";
-            }
+            if (!gasUrl.value) { notificationStatusText.value = "URL未設定"; }
+            else if ('Notification' in window && Notification.permission !== 'granted') { notificationStatusText.value = "通知未許可"; }
+            else if (localStorage.getItem('ai_fcm_linked') === 'true') { notificationStatusText.value = "Firebaseプッシュ稼働中"; }
+            else { notificationStatusText.value = "URL保存完了（未同期）"; }
         };
 
-        const setupServiceWorkerAndPush = async () => {
-            if (!gasUrl.value || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        const setupFirebasePush = async () => {
+            if (!gasUrl.value || !('serviceWorker' in navigator)) return;
 
             try {
-                // 1. GASから公開鍵の取得を試みる
-                console.log("GASから公開鍵を取得中...");
-                const response = await fetch(`${gasUrl.value}?action=getVapidKey`).catch(() => null);
-                let vapidKey = "";
-                if (response) {
-                    const resData = await response.json();
-                    if (resData && resData.vapidPublicKey) vapidKey = resData.vapidPublicKey;
-                }
+                // Firebase専用サービスワーカーファイルを明示的に登録
+                const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+                messaging.useServiceWorker(reg);
 
-                // 2. 鍵が取得できない場合は静的予備キーを使用
-                if (!vapidKey) {
-                    console.warn("GASから鍵が取得できなかったため予備キーを使用します");
-                    vapidKey = "BEl62OhSg83Dg0t1WTVbtf9B65MH3K_bS4Y-v-Uf3WpM7w1Xp6wN8yF4p48L-xH_g8HUXF7wN-H7D838g7HhH-E";
-                }
-
-                const reg = await navigator.serviceWorker.register(swUrl, { scope: './' });
-                await navigator.serviceWorker.ready;
-
-                let sub = await reg.pushManager.getSubscription();
-                if (sub) { await sub.unsubscribe(); }
+                // FirebaseからFCMデバイストークン（宛先アドレス）を取得
+                // ※VAPIDキー（ウェブプッシュ設定の公開鍵）をここに設定
+                const currentToken = await messaging.getToken({ vapidKey: 'YOUR_FIREBASE_PUBLIC_VAPID_KEY' });
                 
-                sub = await reg.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
-                });
-
-                if (sub) {
-                    console.log("GASにエンドポイントを登録中...");
-                    const syncRes = await fetch(gasUrl.value, {
+                if (currentToken) {
+                    console.log("FCMトークン取得成功");
+                    // 鍵を一切露出させず、宛先トークンだけを安全にGASへ転送して保存
+                    await fetch(gasUrl.value, {
                         method: 'POST',
                         body: JSON.stringify({
                             action: 'registerUser',
                             userId: userId.value,
-                            subscription: sub
+                            fcmToken: currentToken
                         })
-                    }).then(r => r.json()).catch(() => null);
-
-                    localStorage.setItem('ai_sw_linked', 'true');
+                    });
+                    localStorage.setItem('ai_fcm_linked', 'true');
                     updateStatusText();
-                    console.log("同期完了成功しました");
+                } else {
+                    console.warn('トークンが取得できませんでした。権限を確認してください。');
                 }
             } catch (err) {
-                console.error("同期失敗エラーログ:", err);
-                localStorage.removeItem('ai_sw_linked');
+                console.error("FCM同期エラー:", err);
+                localStorage.removeItem('ai_fcm_linked');
                 notificationStatusText.value = "同期失敗 (再試行してください)";
             }
         };
 
         const saveGasSettings = async () => {
             if (!gasUrl.value) return;
-            // 末尾に余計な空白が入っていた場合をトリム
             gasUrl.value = gasUrl.value.trim();
             localStorage.setItem('ai_gas_url', gasUrl.value);
-            notificationStatusText.value = "接続・同期中...";
+            notificationStatusText.value = "Firebase同期中...";
             
             if ('Notification' in window && Notification.permission !== 'granted') {
                 const permission = await Notification.requestPermission();
                 if (permission !== 'granted') { updateStatusText(); return; }
             }
-            await setupServiceWorkerAndPush();
+            await setupFirebasePush();
         };
 
         const requestNotificationPermission = async () => {
             if ('Notification' in window) {
                 const permission = await Notification.requestPermission();
-                if (permission === 'granted' && gasUrl.value) { await setupServiceWorkerAndPush(); }
+                if (permission === 'granted' && gasUrl.value) { await setupFirebasePush(); }
             }
             showOnboarding.value = false;
             updateStatusText();
@@ -344,17 +234,8 @@ createApp({
 
         const startTimer = async (tool) => {
             if (isTimerRunning(tool.name)) return;
-            const now = Date.now(); let targetTime = now;
-
-            if (tool.type === 'relative') {
-                targetTime = now + ((tool.minutes || 180) * 60 * 1000);
-            } else {
-                const [h, m] = (tool.fixedTime || '09:00').split(':').map(Number);
-                const d = new Date(); d.setHours(h, m, 0, 0);
-                if (d.getTime() <= now) d.setDate(d.getDate() + 1);
-                targetTime = d.getTime();
-            }
-
+            const now = Date.now();
+            const targetTime = now + (tool.minutes * 60 * 1000);
             const uniqueId = 'tmr-' + Date.now();
             const newTimer = { id: uniqueId, name: tool.name, startTime: now, targetTime, duration: targetTime - now };
             
@@ -369,28 +250,10 @@ createApp({
         const testPushNotification = () => {
             if (!gasUrl.value) return;
             fetch(gasUrl.value, { method: 'POST', body: JSON.stringify({ action: 'testPush', userId: userId.value }) })
-                .then(() => alert('テスト通知要求完了！画面を閉じてお待ちください。'));
+                .then(() => alert('Firebase経由のテスト通知を要求しました！'));
         };
 
-        const saveToolForm = () => {
-            if (!toolForm.value.name) return;
-            if (isEditingMode.value) {
-                const idx = presets.value.findIndex(p => p.id === editingPresetId.value);
-                if (idx !== -1) presets.value[idx] = { ...presets.value[idx], name: toolForm.value.name, type: toolForm.value.type, minutes: Number(toolForm.value.minutes) || 180, fixedTime: toolForm.value.fixedTime };
-                cancelEditMode();
-            } else {
-                presets.value.push({ id: 'pst-' + Date.now(), name: toolForm.value.name, type: toolForm.value.type || 'relative', minutes: Number(toolForm.value.minutes) || 180, fixedTime: toolForm.value.fixedTime || '09:00', icon: '🤖' });
-            }
-            localStorage.setItem('ai_presets', JSON.stringify(presets.value));
-            toolForm.value = { name: '', type: 'relative', minutes: 180, fixedTime: '09:00' };
-        };
-
-        const selectPresetForEdit = (tool) => { isEditingMode.value = true; editingPresetId.value = tool.id; toolForm.value = { name: tool.name, type: tool.type, minutes: tool.minutes, fixedTime: tool.fixedTime }; };
-        const cancelEditMode = () => { isEditingMode.value = false; editingPresetId.value = null; toolForm.value = { name: '', type: 'relative', minutes: 180, fixedTime: '09:00' }; };
-        const deletePreset = (id) => { presets.value = presets.value.filter(p => p.id !== id); localStorage.setItem('ai_presets', JSON.stringify(presets.value)); };
-        const openTimeEditor = (timer) => { editingTimerId.value = editingTimerId.value === timer.id ? null : timer.id; };
         const confirmCancel = (id) => { activeTimersRaw.value = activeTimersRaw.value.filter(t => t.id !== id); localStorage.setItem('ai_active_timers', JSON.stringify(activeTimersRaw.value)); };
-
         const activeTimers = computed(() => {
             ticker.value; const now = Date.now();
             return activeTimersRaw.value.map(t => {
@@ -401,23 +264,15 @@ createApp({
             });
         });
 
-        const formatPeriod = (t) => t.type === 'relative' ? t.minutes + "分後" : "毎日 " + t.fixedTime;
+        const formatPeriod = (t) => t.minutes + "分後";
         const formatAbsoluteTime = (ts) => { const d = new Date(ts); return (d.getMonth()+1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2,'0') + ":" + String(d.getMinutes()).padStart(2,'0'); };
-        const toggleTab = () => { activeTab.value = activeTab.value === 'main' ? 'settings' : 'main'; cancelEditMode(); };
-
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64); const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
-            return outputArray;
-        }
+        const toggleTab = () => { activeTab.value = activeTab.value === 'main' ? 'settings' : 'main'; };
 
         onMounted(() => { initSession(); });
 
         return {
-            activeTab, showOnboarding, gasUrl, notificationStatusText, presets, activeTimers, toolForm, editingTimerId, inlineEditType, inlineEditMinutes, inlineEditTimeStr, isEditingMode,
-            startTimer, openTimeEditor, confirmCancel, saveGasSettings, formatPeriod, formatAbsoluteTime, toggleTab, saveToolForm, selectPresetForEdit, cancelEditMode, deletePreset, isTimerRunning, requestNotificationPermission, testPushNotification
+            activeTab, showOnboarding, gasUrl, notificationStatusText, presets, activeTimers, isTimerRunning,
+            startTimer, confirmCancel, saveGasSettings, formatPeriod, formatAbsoluteTime, toggleTab, requestNotificationPermission, testPushNotification
         };
     }
 }).mount('#app');
