@@ -93,15 +93,19 @@
                 <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">⚡ タップして始動</h3>
                 <div class="grid grid-cols-1 gap-2">
                     <button v-for="tool in presets" :key="tool.id" @click="startTimer(tool)" 
-                        class="w-full bg-slate-900/60 border border-slate-800 p-3.5 rounded-xl flex justify-between items-center">
+                        class="w-full bg-slate-900/60 border border-slate-800 p-3.5 rounded-xl flex justify-between items-center transition"
+                        :class="{'opacity-50 cursor-not-allowed': isTimerRunning(tool.name)}">
                         <div class="flex items-center gap-3">
                             <span class="text-base">{{ tool.icon || '🤖' }}</span>
                             <div>
-                                <div class="font-medium text-white text-sm">{{ tool.name }}</div>
+                                <div class="font-medium text-white text-sm">
+                                    {{ tool.name }} 
+                                    <span v-if="isTimerRunning(tool.name)" class="text-[10px] bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded ml-1 font-normal">稼働中</span>
+                                </div>
                                 <div class="text-[11px] text-slate-400">設定: {{ formatPeriod(tool) }}</div>
                             </div>
                         </div>
-                        <span class="text-slate-600 text-xs">▶</span>
+                        <span class="text-slate-600 text-xs">{{ isTimerRunning(tool.name) ? '🔒' : '▶' }}</span>
                     </button>
                 </div>
             </section>
@@ -122,7 +126,7 @@
                 <div class="space-y-2 text-xs">
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">ツール名</label>
-                        <input type="text" v-model="toolForm.name" placeholder="ツール名" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
+                        <input type="text" v-model="toolForm.name" placeholder="例: Claude Code" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -194,6 +198,7 @@ createApp({
             { id: '2', name: 'Claude 3.5 Sonnet', type: 'relative', minutes: 300, icon: '🧠' }
         ]);
         const activeTimersRaw = ref([]);
+        // toolFormの初期定義を厳格化
         const toolForm = ref({ name: '', type: 'relative', minutes: 180, fixedTime: '09:00' });
 
         const initSession = async () => {
@@ -209,25 +214,39 @@ createApp({
             notificationStatusText.value = gasUrl.value ? "PWAローカル連動中" : "URL未設定";
         };
 
-        // タイマーの複数安全起動ロジック
+        // 指定のタイマーが現在カウントダウン中（解除完了していない）か判定
+        const isTimerRunning = (name) => {
+            const now = Date.now();
+            const found = activeTimersRaw.value.find(t => t.name === name);
+            return found ? (found.targetTime - now > 0) : false;
+        };
+
+        // タイマー始動（すでに起動中なら再セットしないガードを追加）
         const startTimer = async (tool) => {
+            // 【重要】すでに同じ名前のタイマーが稼働中の場合は処理をスキップ
+            if (isTimerRunning(tool.name)) {
+                console.log(`${tool.name} は既に起動中のためスキップしました。`);
+                return;
+            }
+
             const now = Date.now();
             let targetTime = now;
 
             if (tool.type === 'relative') {
-                targetTime = now + (tool.minutes * 60 * 1000);
+                const mins = tool.minutes || 180;
+                targetTime = now + (mins * 60 * 1000);
             } else {
-                const [h, m] = tool.fixedTime.split(':').map(Number);
+                const timeStr = tool.fixedTime || '09:00';
+                const [h, m] = timeStr.split(':').map(Number);
                 const d = new Date(); d.setHours(h, m, 0, 0);
                 if (d.getTime() <= now) d.setDate(d.getDate() + 1);
                 targetTime = d.getTime();
             }
 
-            // 新規・上書き時に他を巻き込まないためのディープなユニークID発行
             const uniqueId = 'tmr-' + Date.now() + Math.random().toString(36).substring(2, 6);
             const newTimer = { id: uniqueId, name: tool.name, startTime: now, targetTime, duration: targetTime - now };
             
-            // 同名チェック
+            // 完了済みの古いタイマーが残っている場合は上書き、なければ純粋追加
             const idx = activeTimersRaw.value.findIndex(t => t.name === tool.name);
             if (idx !== -1) {
                 activeTimersRaw.value[idx] = newTimer;
@@ -243,9 +262,14 @@ createApp({
             }
         };
 
-        // カスタムAIツール登録・確定のフリーズバグ修正
+        // カスタムAIツール登録確定処理（エラーを完全に排除）
         const saveToolForm = () => {
             if (!toolForm.value.name) return;
+
+            // データの安全なフォールバック処理
+            const finalType = toolForm.value.type || 'relative';
+            const finalMinutes = Number(toolForm.value.minutes) || 180;
+            const finalFixedTime = toolForm.value.fixedTime || '09:00';
 
             if (isEditingMode.value) {
                 // 編集上書きモード
@@ -254,9 +278,9 @@ createApp({
                     presets.value[idx] = {
                         id: editingPresetId.value,
                         name: toolForm.value.name,
-                        type: toolForm.value.type,
-                        minutes: toolForm.value.minutes,
-                        fixedTime: toolForm.value.fixedTime,
+                        type: finalType,
+                        minutes: finalMinutes,
+                        fixedTime: finalFixedTime,
                         icon: presets.value[idx].icon || '🤖'
                     };
                 }
@@ -266,9 +290,9 @@ createApp({
                 const newPreset = {
                     id: 'pst-' + Date.now() + Math.random().toString(36).substring(2, 5),
                     name: toolForm.value.name,
-                    type: toolForm.value.type,
-                    minutes: toolForm.value.type === 'relative' ? toolForm.value.minutes : 180,
-                    fixedTime: toolForm.value.type === 'fixed' ? toolForm.value.fixedTime : '09:00',
+                    type: finalType,
+                    minutes: finalMinutes,
+                    fixedTime: finalFixedTime,
                     icon: '🤖'
                 };
                 presets.value.push(newPreset);
@@ -277,7 +301,7 @@ createApp({
             presets.value = [...presets.value];
             localStorage.setItem('ai_presets', JSON.stringify(presets.value));
             
-            // フォームのクリア
+            // フォームの初期化
             toolForm.value = { name: '', type: 'relative', minutes: 180, fixedTime: '09:00' };
 
             if (gasUrl.value) {
@@ -290,7 +314,7 @@ createApp({
             editingPresetId.value = tool.id;
             toolForm.value = { 
                 name: tool.name, 
-                type: tool.type, 
+                type: tool.type || 'relative', 
                 minutes: tool.minutes || 180, 
                 fixedTime: tool.fixedTime || '09:00'
             };
@@ -378,7 +402,7 @@ createApp({
 
         return {
             activeTab, showOnboarding, gasUrl, notificationStatusText, presets, activeTimers, toolForm, editingTimerId, inlineEditType, inlineEditMinutes, inlineEditTimeStr, isEditingMode,
-            startTimer, openTimeEditor, saveInlineTimeChange, confirmCancel, saveGasSettings, formatPeriod, formatAbsoluteTime, toggleTab, saveToolForm, selectPresetForEdit, cancelEditMode, deletePreset
+            startTimer, openTimeEditor, saveInlineTimeChange, confirmCancel, saveGasSettings, formatPeriod, formatAbsoluteTime, toggleTab, saveToolForm, selectPresetForEdit, cancelEditMode, deletePreset, isTimerRunning
         };
     }
 }).mount('#app');
