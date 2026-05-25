@@ -126,18 +126,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// VAPID変換関数（エラー防止のため一番安全な最上部に定義）
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
 const { createApp, ref, onMounted, computed } = Vue;
 
 createApp({
@@ -154,6 +142,18 @@ createApp({
             { id: '2', name: 'Claude 3.5 Sonnet', type: 'relative', minutes: 300, icon: '🧠' }
         ]);
         const activeTimersRaw = ref([]);
+
+        // VAPID変換関数をsetupの「内部」に移動させ、スコープエラーを確実に解決
+        const urlBase64ToUint8Array = (base64String) => {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        };
 
         const initSession = async () => {
             let localId = localStorage.getItem('ai_user_id') || 'usr-' + Math.random().toString(36).substring(2, 12);
@@ -190,7 +190,7 @@ createApp({
             try {
                 // 1. サービスワーカー登録
                 const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-                console.log("Firebaseサービスワーカー登録成功");
+                console.log("Firebaseサービスワーカー登録成功:", reg);
 
                 // 2. VAPIDキーのクレンジングと変換
                 const rawVapidKey = 'BIelJEP1QAPB--9ImzdzE_frQcwV9E6N5RmjiGWqzmi8F9aZkAzec1pwzsziQzq8r_ibmfYNGoqnxBhcsVwdWD8'; // 👈 ご自身の公開鍵
@@ -203,7 +203,7 @@ createApp({
 
                 const convertedVapidKey = urlBase64ToUint8Array(cleanVapidKey);
 
-                // 3. ブラウザ標準のPushManagerを直接叩いて検証（デバッグ兼ねる）
+                // 3. ブラウザ標準のPushManagerを直接叩いて検証
                 await reg.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: convertedVapidKey
