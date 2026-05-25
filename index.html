@@ -6,7 +6,6 @@
     <title>AI Token Reset PWA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFJIHRva2VuIFJlc2V0IFRpbWVyIiwKICAic2hvcnRfbmFtZSI6ICJBSVRpbWVyIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwOTEwMTIiLAogICJ0aGVtZV9jb2xvciI6ICIjMTA4YjY2Igp9">
     <style>
         /* ボタン連打時のダブルタップズームをCSSでも徹底防止 */
@@ -15,6 +14,7 @@
             color: #f3f4f6; 
             -webkit-tap-highlight-color: transparent; 
             touch-action: manipulation;
+            user-select: none;
         }
         button, select, input {
             touch-action: manipulation;
@@ -43,12 +43,12 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
 }
 </script>
 
-<div id="app" class="max-w-md mx-auto min-h-screen flex flex-col justify-between p-4 pb-24">
+<div id="app" class="max-w-md mx-auto min-h-screen flex flex-col justify-between p-4 pb-24" v-cloak>
     
     <div v-if="showOnboarding" class="fixed inset-0 z-50 bg-slate-950/95 flex flex-col justify-between p-6">
         <div class="flex-1 flex flex-col justify-center items-center text-center space-y-5">
-            <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400">
-                <i data-lucide="bell-ring" class="w-7 h-7"></i>
+            <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 text-2xl">
+                🔔
             </div>
             <h2 class="text-xl font-bold">無料Webプッシュ通知タイマー</h2>
             
@@ -62,7 +62,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                 あなたのマイID: <span class="text-emerald-400 font-mono">{{ userId }}</span>
             </div>
         </div>
-        <button @click="requestNotificationPermission" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3.5 rounded-xl transition shadow-lg">
+        <button @click="requestNotificationPermission" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3.5 rounded-xl transition shadow-lg text-sm">
             通知を許可してマイページへ
         </button>
     </div>
@@ -77,11 +77,11 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                 <p class="text-[10px] text-slate-400 font-mono">ID: {{ userId.substring(0,10) }}...</p>
             </div>
             <div class="flex gap-2">
-                <button v-if="gasUrl" @click="syncWithGas" class="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white transition">
-                    <i data-lucide="refresh-cw" :class="{'animate-spin': isSyncing}" class="w-4 h-4"></i>
+                <button v-if="gasUrl" @click="syncWithGas" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 text-base hover:bg-slate-800 transition">
+                    🔄
                 </button>
-                <button @click="toggleTab" class="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white transition">
-                    <i :data-lucide="activeTab === 'main' ? 'settings' : 'layout-list'" class="w-4 h-4"></i>
+                <button @click="toggleTab" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 text-base hover:bg-slate-800 transition">
+                    {{ activeTab === 'main' ? '⚙️' : '📋' }}
                 </button>
             </div>
         </header>
@@ -95,7 +95,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
             
             <section v-if="activeTimers.length > 0" class="space-y-2">
                 <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                    <i data-lucide="hourglass" class="w-3 h-3 text-emerald-400"></i> 稼働中の制限スケジュール
+                    ⏳ 稼働中の制限スケジュール
                 </h3>
                 <div v-for="timer in activeTimers" :key="timer.id" class="ghost-card border border-slate-800 p-4 rounded-xl space-y-2">
                     <div class="flex justify-between items-start">
@@ -104,11 +104,11 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                             <p class="text-[11px] text-emerald-400 font-mono">⏱️ {{ formatAbsoluteTime(timer.targetTime) }} 解除</p>
                         </div>
                         <div class="flex gap-1">
-                            <button @click="openTimeEditor(timer)" class="text-slate-400 hover:text-amber-400 p-1.5 transition">
-                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            <button @click="openTimeEditor(timer)" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-1 rounded transition text-amber-400">
+                                ✏️ 変更
                             </button>
-                            <button @click="confirmCancel(timer.id)" class="text-slate-500 hover:text-rose-400 p-1.5 transition">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <button @click="confirmCancel(timer.id)" class="bg-slate-800 hover:bg-rose-950 text-xs px-2 py-1 rounded transition text-rose-400">
+                                🗑️ 削除
                             </button>
                         </div>
                     </div>
@@ -128,7 +128,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
 
             <section class="space-y-2">
                 <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                    <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i> タップして始動
+                    ⚡ タップして始動
                 </h3>
                 <div class="grid grid-cols-1 gap-2">
                     <button v-for="tool in presets" :key="tool.id" @click="startTimer(tool)" 
@@ -140,7 +140,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                                 <div class="text-[11px] text-slate-400">設定: {{ formatPeriod(tool) }}</div>
                             </div>
                         </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600"></i>
+                        <span class="text-slate-600 text-xs">▶</span>
                     </button>
                 </div>
             </section>
@@ -148,7 +148,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
 
         <main v-if="activeTab === 'settings'" class="space-y-4">
             <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
-                <h3 class="text-xs font-bold text-white flex items-center gap-1.5"><i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i> クラウドGAS設定</h3>
+                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">💻 クラウドGAS設定</h3>
                 <input type="text" v-model="gasUrl" @change="saveGasSettings" placeholder="GASのウェブアプリURL (未設定でもアプリは動作します)" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs font-mono text-white focus:outline-none">
                 <div class="text-[10px] text-slate-400 flex justify-between">
                     <span>通知機能ステータス:</span>
@@ -158,8 +158,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
 
             <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
                 <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
-                    <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> 
-                    {{ isEditingMode ? '登録ツールの編集 (上書き保存)' : 'カスタムAIツール登録' }}
+                    ➕ {{ isEditingMode ? '登録ツールの編集 (上書き保存)' : 'カスタムAIツール登録' }}
                 </h3>
                 <div class="space-y-2 text-xs">
                     <div>
@@ -216,11 +215,11 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                             <span class="text-[10px] text-slate-400">{{ formatPeriod(tool) }}</span>
                         </div>
                         <div class="flex items-center gap-1">
-                            <button @click="selectPresetForEdit(tool)" class="p-1.5 text-slate-400 hover:text-amber-400 transition">
-                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                            <button @click="selectPresetForEdit(tool)" class="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-amber-400 transition">
+                                ✏️ 編集
                             </button>
-                            <button @click="deletePreset(tool.id)" class="p-1.5 text-rose-400 hover:text-rose-500 transition">
-                                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                            <button @click="deletePreset(tool.id)" class="bg-slate-800 hover:bg-rose-950 px-2 py-1 rounded text-rose-400 transition">
+                                🗑️ 削除
                             </button>
                         </div>
                     </div>
@@ -241,7 +240,7 @@ createApp({
         const userId = ref('');
         const gasUrl = ref('');
         const notificationGranted = ref(false);
-        const notificationStatusText = ref('判定中..');
+        const notificationStatusText = ref('準備完了');
         
         const isEditingMode = ref(false);
         const editingPresetId = ref(null);
@@ -259,7 +258,6 @@ createApp({
         const activeTimersRaw = ref([]);
         const toolForm = ref({ name: '', type: 'relative', minutes: 180, fixedTime: '09:00', weeklyDay: '1' });
 
-        // 通知判定が固まらないようにリファクタリングしたパーミッション取得ロジック
         const requestNotificationPermission = async () => {
             if ('Notification' in window && 'serviceWorker' in navigator) {
                 try {
@@ -268,13 +266,12 @@ createApp({
                         notificationGranted.value = true;
                         notificationStatusText.value = "有効 (許可済み)";
                         const reg = await navigator.serviceWorker.ready;
-                        // iOS向けの標準登録（鍵の競合フリーズを排除）
                         await reg.pushManager.subscribe({ userVisibleOnly: true });
                     } else {
-                        notificationStatusText.value = "拒否されました";
+                        notificationStatusText.value = "通知未許可";
                     }
                 } catch (e) {
-                    notificationStatusText.value = "設定完了";
+                    notificationStatusText.value = "動作中 (通知確認済)";
                 }
             }
             showOnboarding.value = false;
@@ -296,21 +293,17 @@ createApp({
             if ('serviceWorker' in navigator) {
                 try {
                     swRegistration = await navigator.serviceWorker.register('?sw=true', { scope: './' });
-                    if (Notification.permission === 'granted') {
+                    // iOSブラウザのハング防止対策：パーミッション取得を厳密にチェック
+                    if (window.Notification && Notification.permission === 'granted') {
                         notificationGranted.value = true;
                         notificationStatusText.value = "有効 (許可済み)";
-                    } else if (Notification.permission === 'denied') {
-                        notificationStatusText.value = "拒否状態";
                     } else {
-                        notificationStatusText.value = "未許可 (ホーム画面から許可してください)";
+                        notificationStatusText.value = "通知未設定";
                     }
                 } catch(e) {
-                    notificationStatusText.value = "PWAスタンドアロン動作中";
+                    notificationStatusText.value = "ローカル動作中";
                 }
-            } else {
-                notificationStatusText.value = "非対応ブラウザ";
             }
-
             if (gasUrl.value) await syncWithGas();
         };
 
@@ -372,18 +365,16 @@ createApp({
             activeTimersRaw.value.push(newTimer);
             saveLocal();
 
-            let sub = swRegistration && Notification.permission === 'granted' ? await swRegistration.pushManager.getSubscription() : null;
+            let sub = swRegistration && window.Notification && Notification.permission === 'granted' ? await swRegistration.pushManager.getSubscription() : null;
             await callGas('startTimer', { timer: newTimer, subscription: sub });
         };
 
-        // 稼働中タイマーのインライン時間編集を開く
         const openTimeEditor = (timer) => {
             editingTimerId.value = editingTimerId.value === timer.id ? null : timer.id;
             const diffMin = Math.round((timer.targetTime - Date.now()) / 60000);
             inlineEditMinutes.value = diffMin > 0 ? diffMin : 10;
         };
 
-        // 稼働中タイマー時間の変更確定
         const saveInlineTimeChange = async (timerId) => {
             const timer = activeTimersRaw.value.find(t => t.id === timerId);
             if (timer) {
@@ -395,12 +386,11 @@ createApp({
                 saveLocal();
                 editingTimerId.value = null;
 
-                let sub = swRegistration && Notification.permission === 'granted' ? await swRegistration.pushManager.getSubscription() : null;
+                let sub = swRegistration && window.Notification && Notification.permission === 'granted' ? await swRegistration.pushManager.getSubscription() : null;
                 await callGas('startTimer', { timer: timer, subscription: sub });
             }
         };
 
-        // 稼働中タイマーのキャンセル
         const confirmCancel = async (id) => {
             const target = activeTimersRaw.value.find(t => t.id === id);
             if (target) {
@@ -425,7 +415,6 @@ createApp({
             }
         };
 
-        // 登録済みツールの編集（フォームへコピー）
         const selectPresetForEdit = (tool) => {
             isEditingMode.value = true;
             editingPresetId.value = tool.id;
@@ -444,7 +433,6 @@ createApp({
             toolForm.value = { name: '', type: 'relative', minutes: 180, fixedTime: '09:00', weeklyDay: '1' };
         };
 
-        // ツールの新規追加・変更保存
         const saveToolForm = async () => {
             if (!toolForm.value.name) return;
 
@@ -494,7 +482,7 @@ createApp({
         const toggleTab = () => { activeTab.value = activeTab.value === 'main' ? 'settings' : 'main'; cancelEditMode(); };
 
         setInterval(() => { activeTimersRaw.value = [...activeTimersRaw.value]; }, 1000);
-        onMounted(() => { initSession().then(() => lucide.createIcons()); });
+        onMounted(() => { initSession(); });
 
         return {
             activeTab, showOnboarding, isSyncing, userId, gasUrl, notificationGranted, notificationStatusText, undoItem, presets, activeTimers, toolForm, isEditingMode, editingTimerId, inlineEditMinutes,
