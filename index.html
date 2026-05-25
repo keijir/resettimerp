@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="icon" href="data:,">
     <title>AI Token Reset PWA (FCM)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+    <link rel="icon" href="data:,">
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFJIHRva2VuIFJlc2V0IFRpbWVyIiwKICAic2hvcnRfbmFtZSI6ICJBSVRpbWVyIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwOTEwMTIiLAogICJ0aGVtZV9jb2xvciI6ICIjMTA4YjY2Igp9">
     <style>
         body { background-color: #0b0f19; color: #f3f4f6; -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; }
@@ -113,6 +113,9 @@
 </div>
 
 <script>
+// ==========================================
+// ⚙️ Firebase 接続用初期設定（ご自身のプロジェクト情報に書き換えてください）
+// ==========================================
 // 1. Firebaseの初期化（露出しても安全な公開情報）
 const firebaseConfig = {
     apiKey: "AIzaSyBEWkFXCVxrXONInlv0wdF2w0djz6MQKI0",
@@ -170,21 +173,26 @@ createApp({
             else { notificationStatusText.value = "URL保存完了（未同期）"; }
         };
 
+        // 🛠️ 【修正箇所】useServiceWorkerを完全に除外し、最新の引数形式に書き換えました
         const setupFirebasePush = async () => {
             if (!gasUrl.value || !('serviceWorker' in navigator)) return;
 
             try {
-                // Firebase専用サービスワーカーファイルを明示的に登録
+                // 1. Firebase用サービスワーカーをブラウザに登録
                 const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-                messaging.useServiceWorker(reg);
+                console.log("Firebaseサービスワーカーの登録に成功しました");
 
-                // FirebaseからFCMデバイストークン（宛先アドレス）を取得
-                // ※VAPIDキー（ウェブプッシュ設定の公開鍵）をここに設定
-                const currentToken = await messaging.getToken({ vapidKey: 'YOUR_FIREBASE_PUBLIC_VAPID_KEY' });
+                // 2. 登録したServiceWorkerインスタンスを明示的にgetTokenへ引き渡す (v9/v10以降の正式仕様)
+                // ※YOUR_FIREBASE_PUBLIC_VAPID_KEYをご自身のWebプッシュ設定の「公開鍵」に書き換えてください
+                const currentToken = await messaging.getToken({ 
+                    vapidKey: 'YOUR_FIREBASE_PUBLIC_VAPID_KEY',
+                    serviceWorkerRegistration: reg
+                });
                 
                 if (currentToken) {
-                    console.log("FCMトークン取得成功");
-                    // 鍵を一切露出させず、宛先トークンだけを安全にGASへ転送して保存
+                    console.log("FCMトークンの取得に成功しました:", currentToken);
+                    
+                    // トークン情報を安全にGAS（サーバー）へ送信
                     await fetch(gasUrl.value, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -196,10 +204,10 @@ createApp({
                     localStorage.setItem('ai_fcm_linked', 'true');
                     updateStatusText();
                 } else {
-                    console.warn('トークンが取得できませんでした。権限を確認してください。');
+                    console.warn('FCMトークンが取得できませんでした。通知設定や権限を確認してください。');
                 }
             } catch (err) {
-                console.error("FCM同期エラー:", err);
+                console.error("FCM同期エラー詳細ログ:", err);
                 localStorage.removeItem('ai_fcm_linked');
                 notificationStatusText.value = "同期失敗 (再試行してください)";
             }
@@ -251,10 +259,11 @@ createApp({
         const testPushNotification = () => {
             if (!gasUrl.value) return;
             fetch(gasUrl.value, { method: 'POST', body: JSON.stringify({ action: 'testPush', userId: userId.value }) })
-                .then(() => alert('Firebase経由のテスト通知を要求しました！'));
+                .then(() => alert('Firebase経由のテスト通知を要求しました！アプリを閉じてお待ちください。'));
         };
 
         const confirmCancel = (id) => { activeTimersRaw.value = activeTimersRaw.value.filter(t => t.id !== id); localStorage.setItem('ai_active_timers', JSON.stringify(activeTimersRaw.value)); };
+        
         const activeTimers = computed(() => {
             ticker.value; const now = Date.now();
             return activeTimersRaw.value.map(t => {
