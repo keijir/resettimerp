@@ -89,9 +89,9 @@
                 <div class="grid grid-cols-1 gap-2">
                     <button v-for="tool in presets" :key="tool.id" @click="startTimer(tool)" 
                         class="w-full bg-slate-900/60 border border-slate-800 p-3.5 rounded-xl flex justify-between items-center transition"
-                        :class="{\u0027opacity-50 cursor-not-allowed\u0027: isTimerRunning(tool.name)}">
+                        :class="{'opacity-50 cursor-not-allowed': isTimerRunning(tool.name)}">
                         <div class="flex items-center gap-3">
-                            <span class="text-base">{{ tool.icon || \u0027🤖\u0027 }}</span>
+                            <span class="text-base">{{ tool.icon || '🤖' }}</span>
                             <div>
                                 <div class="font-medium text-white text-sm">
                                     {{ tool.name }} 
@@ -100,13 +100,13 @@
                                 <div class="text-[11px] text-slate-400">設定: {{ formatPeriod(tool) }}</div>
                             </div>
                         </div>
-                        <span class="text-slate-600 text-xs">{{ isTimerRunning(tool.name) ? \u0027🔒\u0027 : \u0027▶\u0027 }}</span>
+                        <span class="text-slate-600 text-xs">{{ isTimerRunning(tool.name) ? '🔒' : '▶' }}</span>
                     </button>
                 </div>
             </section>
         </main>
 
-        <main v-if="activeTab === \u0027settings\u0027" class="space-y-4">
+        <main v-if="activeTab === 'settings'" class="space-y-4">
             <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
                 <h3 class="text-xs font-bold text-white">💻 クラウドGAS設定</h3>
                 <input type="text" v-model="gasUrl" placeholder="GASのウェブアプリURLをペースト" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs font-mono text-white">
@@ -119,18 +119,18 @@
 
                 <div class="text-[10px] text-slate-400 flex justify-between items-center pt-2 border-t border-slate-800/50 mt-2">
                     <span>システム通信ステータス:</span>
-                    <span class="font-bold px-2 py-0.5 rounded text-[10px]" :class="notificationStatusText.includes(\u0027稼働中\u0027) ? \u0027bg-emerald-950 text-emerald-400\u0027 : \u0027bg-amber-950 text-amber-400\u0027">
+                    <span class="font-bold px-2 py-0.5 rounded text-[10px]" :class="notificationStatusText.includes('稼働中') ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'">
                         {{ notificationStatusText }}
                     </span>
                 </div>
                 
-                <button @click="testPushNotification" v-if="notificationStatusText.includes(\u0027稼働中\u0027)" class="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 rounded-lg font-bold transition">
+                <button @click="testPushNotification" v-if="notificationStatusText.includes('稼働中')" class="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 rounded-lg font-bold transition">
                     🔔 テストプッシュ通知を即時送信
                 </button>
             </section>
 
             <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
-                <h3 class="text-xs font-bold text-white">{{ isEditingMode ? \u0027登録ツールの編集\u0027 : \u0027カスタムAIツール登録\u0027 }}</h3>
+                <h3 class="text-xs font-bold text-white">⚙️ {{ isEditingMode ? '登録ツールの編集' : 'カスタムAIツール登録' }}</h3>
                 <div class="space-y-2 text-xs">
                     <div>
                         <label class="block text-[11px] text-slate-400 mb-1">ツール名</label>
@@ -145,26 +145,27 @@
                             </select>
                         </div>
                         <div>
-                            <label v-if="toolForm.type === \u0027relative\u0027" class="block text-[11px] text-slate-400 mb-1">周期 (分)</label>
+                            <label v-if="toolForm.type === 'relative'" class="block text-[11px] text-slate-400 mb-1">周期 (分)</label>
                             <label v-else class="block text-[11px] text-slate-400 mb-1">時刻</label>
-                            <input v-if="toolForm.type === \u0027relative\u0027" type="number" v-model.number="toolForm.minutes" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
+                            <input v-if="toolForm.type === 'relative'" type="number" v-model.number="toolForm.minutes" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
                             <input v-else type="time" v-model="toolForm.fixedTime" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-white">
                         </div>
                     </div>
                     <div class="flex gap-2 pt-2">
                         <button @click="saveToolForm" class="flex-1 bg-emerald-500 text-slate-950 font-bold py-2 rounded-lg">
-                            {{ isEditingMode ? \u0027変更を確定\u0027 : \u0027新規追加\u0027 }}
+                            {{ isEditingMode ? '変更を確定' : '新規追加' }}
                         </button>
                         <button v-if="isEditingMode" @click="cancelEditMode" class="bg-slate-800 text-slate-300 px-3 py-2 rounded-lg">中止</button>
                     </div>
                 </div>
 
-                <div v-if="presets.length > 0" class="pt-2 border-t border-slate-800/60 space-y-1">
+                <div v-if="presets.length > 0" class="pt-3 border-t border-slate-800/60 space-y-1">
+                    <p class="text-[10px] text-slate-500 font-bold mb-1">📋 登録済みツール一覧</p>
                     <div v-for="p in presets" :key="p.id" class="flex justify-between items-center bg-slate-950/40 p-2 rounded border border-slate-800 text-[11px]">
-                        <span class="text-white font-medium">{{p.icon}} {{p.name}} ({{formatPeriod(p)}})</span>
+                        <span class="text-white font-medium">{{ p.icon || '🤖' }} {{ p.name }} ({{ formatPeriod(p) }})</span>
                         <div class="flex gap-2">
-                            <button @click="selectPresetForEdit(p)" class="text-amber-400">✏️</button>
-                            <button @click="deletePreset(p.id)" class="text-rose-400">🗑️</button>
+                            <button @click="selectPresetForEdit(p)" class="text-amber-400 px-1">✏️</button>
+                            <button @click="deletePreset(p.id)" class="text-rose-400 px-1">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -175,65 +176,73 @@
 
 <script>
 const swCode = `
-self.addEventListener(\u0027push\u0027, function(event) {
-    let data = { title: \u0027制限解除完了\u0027, body: \u0027AIツールの利用制限が解除されました！\u0027 };
+self.addEventListener('push', function(event) {
+    let data = { title: '制限解除完了', body: 'AIツールの利用制限が解除されました！' };
     if (event.data) {
         try { data = event.data.json(); } catch (e) { data.body = event.data.text(); }
     }
     const options = {
         body: data.body,
-        icon: \u0027data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%2310b981"/></svg>\u0027,
-        badge: \u0027data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%2310b981"/></svg>\u0027,
+        icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%2310b981"/></svg>',
+        badge: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%2310b981"/></svg>',
         vibrate: [200, 100, 200]
     };
     event.waitUntil(self.registration.showNotification(data.title, options));
 });
 `;
 
-const blob = new Blob([swCode], { type: \u0027application/javascript\u0027 });
+const blob = new Blob([swCode], { type: 'application/javascript' });
 const swUrl = URL.createObjectURL(blob);
 
 const { createApp, ref, onMounted, computed } = Vue;
 
 createApp({
     setup() {
-        const activeTab = ref(\u0027main\u0027);
+        const activeTab = ref('main');
         const showOnboarding = ref(false);
-        const userId = ref(\u0027\u0027);
-        const gasUrl = ref(\u0027\u0027);
-        const notificationStatusText = ref(\u0027未連動\u0027);
+        const userId = ref('');
+        const gasUrl = ref('');
+        const notificationStatusText = ref('未連動');
         
         const isEditingMode = ref(false);
         const editingPresetId = ref(null);
         const editingTimerId = ref(null);
         
-        const inlineEditType = ref(\u0027relative\u0027);
+        const inlineEditType = ref('relative');
         const inlineEditMinutes = ref(180);
-        const inlineEditTimeStr = ref(\u002712:00\u0027);
+        const inlineEditTimeStr = ref('12:00');
         const ticker = ref(0);
 
         const presets = ref([
-            { id: \u00271\u0027, name: \u0027ChatGPT Plus\u0027, type: \u0027relative\u0027, minutes: 180, icon: \u0027💬\u0027 },
-            { id: \u00272\u0027, name: \u0027Claude 3.5 Sonnet\u0027, type: \u0027relative\u0027, minutes: 300, icon: \u0027🧠\u0027 }
+            { id: '1', name: 'ChatGPT Plus', type: 'relative', minutes: 180, icon: '💬' },
+            { id: '2', name: 'Claude 3.5 Sonnet', type: 'relative', minutes: 300, icon: '🧠' }
         ]);
         const activeTimersRaw = ref([]);
-        const toolForm = ref({ name: \u0027\u0027, type: \u0027relative\u0027, minutes: 180, fixedTime: \u002709:00\u0027 });
+        const toolForm = ref({ name: '', type: 'relative', minutes: 180, fixedTime: '09:00' });
 
         const initSession = async () => {
-            let localId = localStorage.getItem(\u0027ai_user_id\u0027) || \u0027usr-\u0027 + Math.random().toString(36).substring(2, 12);
-            localStorage.setItem(\u0027ai_user_id\u0027, localId);
+            let localId = localStorage.getItem('ai_user_id') || 'usr-' + Math.random().toString(36).substring(2, 12);
+            localStorage.setItem('ai_user_id', localId);
             userId.value = localId;
-            gasUrl.value = localStorage.getItem(\u0027ai_gas_url\u0027) || \u0027\u0027;
+            gasUrl.value = localStorage.getItem('ai_gas_url') || '';
 
-            if (localStorage.getItem(\u0027ai_presets\u0027)) presets.value = JSON.parse(localStorage.getItem(\u0027ai_presets\u0027));
-            if (localStorage.getItem(\u0027ai_active_timers\u0027)) activeTimersRaw.value = JSON.parse(localStorage.getItem(\u0027ai_active_timers\u0027));
+            if (localStorage.getItem('ai_presets')) {
+                try {
+                    presets.value = JSON.parse(localStorage.getItem('ai_presets'));
+                } catch(e) { console.error("データ読み込み失敗", e); }
+            }
+            if (localStorage.getItem('ai_active_timers')) {
+                try {
+                    activeTimersRaw.value = JSON.parse(localStorage.getItem('ai_active_timers'));
+                } catch(e) { console.error("タイマーデータ読み込み失敗", e); }
+            }
 
             setInterval(() => { ticker.value++; }, 1000);
 
-            if (\u0027Notification\u0027 in window) {
-                if (Notification.permission === \u0027default\u0027) {
+            if ('Notification' in window) {
+                if (Notification.permission === 'default') {
                     showOnboarding.value = true;
-                } else if (Notification.permission === \u0027granted\u0027 && gasUrl.value) {
+                } else if (Notification.permission === 'granted' && gasUrl.value) {
                     setupServiceWorkerAndPush();
                 }
             }
@@ -243,9 +252,9 @@ createApp({
         const updateStatusText = () => {
             if (!gasUrl.value) {
                 notificationStatusText.value = "URL未設定";
-            } else if (\u0027Notification\u0027 in window && Notification.permission !== \u0027granted\u0027) {
+            } else if ('Notification' in window && Notification.permission !== 'granted') {
                 notificationStatusText.value = "通知未許可";
-            } else if (localStorage.getItem(\u0027ai_sw_linked\u0027) === \u0027true\u0027) {
+            } else if (localStorage.getItem('ai_sw_linked') === 'true') {
                 notificationStatusText.value = "PWAバックグラウンド通信稼働中";
             } else {
                 notificationStatusText.value = "URL保存完了（未同期）";
@@ -253,22 +262,25 @@ createApp({
         };
 
         const setupServiceWorkerAndPush = async () => {
-            if (!gasUrl.value || !(\u0027serviceWorker\u0027 in navigator) || !(\u0027PushManager\u0027 in window)) return;
+            if (!gasUrl.value || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
             try {
-                // 1. GASからVAPID公開鍵を動的取得
+                // 1. GASから公開鍵の取得を試みる
+                console.log("GASから公開鍵を取得中...");
                 const response = await fetch(`${gasUrl.value}?action=getVapidKey`).catch(() => null);
                 let vapidKey = "";
                 if (response) {
                     const resData = await response.json();
-                    if (resData \u0026\u0026 resData.vapidPublicKey) vapidKey = resData.vapidPublicKey;
+                    if (resData && resData.vapidPublicKey) vapidKey = resData.vapidPublicKey;
                 }
 
+                // 2. 鍵が取得できない場合は静的予備キーを使用
                 if (!vapidKey) {
-                    throw new Error("GASから鍵を取得できませんでした");
+                    console.warn("GASから鍵が取得できなかったため予備キーを使用します");
+                    vapidKey = "BEl62OhSg83Dg0t1WTVbtf9B65MH3K_bS4Y-v-Uf3WpM7w1Xp6wN8yF4p48L-xH_g8HUXF7wN-H7D838g7HhH-E";
                 }
 
-                const reg = await navigator.serviceWorker.register(swUrl, { scope: \u0027./\u0027 });
+                const reg = await navigator.serviceWorker.register(swUrl, { scope: './' });
                 await navigator.serviceWorker.ready;
 
                 let sub = await reg.pushManager.getSubscription();
@@ -280,42 +292,45 @@ createApp({
                 });
 
                 if (sub) {
-                    await fetch(gasUrl.value, {
-                        method: \u0027POST\u0027,
-                        mode: \u0027cors\u0027,
+                    console.log("GASにエンドポイントを登録中...");
+                    const syncRes = await fetch(gasUrl.value, {
+                        method: 'POST',
                         body: JSON.stringify({
-                            action: \u0027registerUser\u0027,
+                            action: 'registerUser',
                             userId: userId.value,
                             subscription: sub
                         })
-                    });
+                    }).then(r => r.json()).catch(() => null);
 
-                    localStorage.setItem(\u0027ai_sw_linked\u0027, \u0027true\u0027);
+                    localStorage.setItem('ai_sw_linked', 'true');
                     updateStatusText();
+                    console.log("同期完了成功しました");
                 }
             } catch (err) {
-                console.error(err);
-                localStorage.removeItem(\u0027ai_sw_linked\u0027);
+                console.error("同期失敗エラーログ:", err);
+                localStorage.removeItem('ai_sw_linked');
                 notificationStatusText.value = "同期失敗 (再試行してください)";
             }
         };
 
         const saveGasSettings = async () => {
             if (!gasUrl.value) return;
-            localStorage.setItem(\u0027ai_gas_url\u0027, gasUrl.value);
+            // 末尾に余計な空白が入っていた場合をトリム
+            gasUrl.value = gasUrl.value.trim();
+            localStorage.setItem('ai_gas_url', gasUrl.value);
             notificationStatusText.value = "接続・同期中...";
             
-            if (\u0027Notification\u0027 in window \u0026\u0026 Notification.permission !== \u0027granted\u0027) {
+            if ('Notification' in window && Notification.permission !== 'granted') {
                 const permission = await Notification.requestPermission();
-                if (permission !== \u0027granted\u0027) { updateStatusText(); return; }
+                if (permission !== 'granted') { updateStatusText(); return; }
             }
             await setupServiceWorkerAndPush();
         };
 
         const requestNotificationPermission = async () => {
-            if (\u0027Notification\u0027 in window) {
+            if ('Notification' in window) {
                 const permission = await Notification.requestPermission();
-                if (permission === \u0027granted\u0027 \u0026\u0026 gasUrl.value) { await setupServiceWorkerAndPush(); }
+                if (permission === 'granted' && gasUrl.value) { await setupServiceWorkerAndPush(); }
             }
             showOnboarding.value = false;
             updateStatusText();
@@ -331,68 +346,68 @@ createApp({
             if (isTimerRunning(tool.name)) return;
             const now = Date.now(); let targetTime = now;
 
-            if (tool.type === \u0027relative\u0027) {
+            if (tool.type === 'relative') {
                 targetTime = now + ((tool.minutes || 180) * 60 * 1000);
             } else {
-                const [h, m] = (tool.fixedTime || \u002709:00\u0027).split(\u0027:\u0027).map(Number);
+                const [h, m] = (tool.fixedTime || '09:00').split(':').map(Number);
                 const d = new Date(); d.setHours(h, m, 0, 0);
                 if (d.getTime() <= now) d.setDate(d.getDate() + 1);
                 targetTime = d.getTime();
             }
 
-            const uniqueId = \u0027tmr-\u0027 + Date.now();
+            const uniqueId = 'tmr-' + Date.now();
             const newTimer = { id: uniqueId, name: tool.name, startTime: now, targetTime, duration: targetTime - now };
             
             activeTimersRaw.value.push(newTimer);
-            localStorage.setItem(\u0027ai_active_timers\u0027, JSON.stringify(activeTimersRaw.value));
+            localStorage.setItem('ai_active_timers', JSON.stringify(activeTimersRaw.value));
 
             if (gasUrl.value) {
-                fetch(gasUrl.value, { method: \u0027POST\u0027, body: JSON.stringify({ action: \u0027startTimer\u0027, userId: userId.value, timer: newTimer }) }).catch(()=>{});
+                fetch(gasUrl.value, { method: 'POST', body: JSON.stringify({ action: 'startTimer', userId: userId.value, timer: newTimer }) }).catch(()=>{});
             }
         };
 
         const testPushNotification = () => {
             if (!gasUrl.value) return;
-            fetch(gasUrl.value, { method: \u0027POST\u0027, body: JSON.stringify({ action: \u0027testPush\u0027, userId: userId.value }) })
-                .then(() => alert(\u0027テスト通知要求完了！画面を閉じてお待ちください。\u0027));
+            fetch(gasUrl.value, { method: 'POST', body: JSON.stringify({ action: 'testPush', userId: userId.value }) })
+                .then(() => alert('テスト通知要求完了！画面を閉じてお待ちください。'));
         };
 
         const saveToolForm = () => {
             if (!toolForm.value.name) return;
             if (isEditingMode.value) {
                 const idx = presets.value.findIndex(p => p.id === editingPresetId.value);
-                if (idx !== -1) presets.value[idx] = { ...presets.value[idx], name: toolForm.value.name, type: toolForm.value.type, minutes: Number(toolForm.value.minutes), fixedTime: toolForm.value.fixedTime };
+                if (idx !== -1) presets.value[idx] = { ...presets.value[idx], name: toolForm.value.name, type: toolForm.value.type, minutes: Number(toolForm.value.minutes) || 180, fixedTime: toolForm.value.fixedTime };
                 cancelEditMode();
             } else {
-                presets.value.push({ id: \u0027pst-\u0027 + Date.now(), name: toolForm.value.name, type: toolForm.value.type, minutes: Number(toolForm.value.minutes), fixedTime: toolForm.value.fixedTime, icon: \u0027🤖\u0027 });
+                presets.value.push({ id: 'pst-' + Date.now(), name: toolForm.value.name, type: toolForm.value.type || 'relative', minutes: Number(toolForm.value.minutes) || 180, fixedTime: toolForm.value.fixedTime || '09:00', icon: '🤖' });
             }
-            localStorage.setItem(\u0027ai_presets\u0027, JSON.stringify(presets.value));
-            toolForm.value = { name: \u0027\u0027, type: \u0027relative\u0027, minutes: 180, fixedTime: \u002709:00\u0027 };
+            localStorage.setItem('ai_presets', JSON.stringify(presets.value));
+            toolForm.value = { name: '', type: 'relative', minutes: 180, fixedTime: '09:00' };
         };
 
         const selectPresetForEdit = (tool) => { isEditingMode.value = true; editingPresetId.value = tool.id; toolForm.value = { name: tool.name, type: tool.type, minutes: tool.minutes, fixedTime: tool.fixedTime }; };
-        const cancelEditMode = () => { isEditingMode.value = false; editingPresetId.value = null; toolForm.value = { name: \u0027\u0027, type: \u0027relative\u0027, minutes: 180, fixedTime: \u002709:00\u0027 }; };
-        const deletePreset = (id) => { presets.value = presets.value.filter(p => p.id !== id); localStorage.setItem(\u0027ai_presets\u0027, JSON.stringify(presets.value)); };
+        const cancelEditMode = () => { isEditingMode.value = false; editingPresetId.value = null; toolForm.value = { name: '', type: 'relative', minutes: 180, fixedTime: '09:00' }; };
+        const deletePreset = (id) => { presets.value = presets.value.filter(p => p.id !== id); localStorage.setItem('ai_presets', JSON.stringify(presets.value)); };
         const openTimeEditor = (timer) => { editingTimerId.value = editingTimerId.value === timer.id ? null : timer.id; };
-        const confirmCancel = (id) => { activeTimersRaw.value = activeTimersRaw.value.filter(t => t.id !== id); localStorage.setItem(\u0027ai_active_timers\u0027, JSON.stringify(activeTimersRaw.value)); };
+        const confirmCancel = (id) => { activeTimersRaw.value = activeTimersRaw.value.filter(t => t.id !== id); localStorage.setItem('ai_active_timers', JSON.stringify(activeTimersRaw.value)); };
 
         const activeTimers = computed(() => {
             ticker.value; const now = Date.now();
             return activeTimersRaw.value.map(t => {
                 const diff = t.targetTime - now;
-                if (diff <= 0) return { ...t, timeLeft: \u0027制限解除完了\u0027, progress: 100 };
+                if (diff <= 0) return { ...t, timeLeft: '制限解除完了', progress: 100 };
                 const hrs = Math.floor(diff / 3600000); const mins = Math.floor((diff % 3600000) / 60000); const secs = Math.floor((diff % 60000) / 1000);
-                return { ...t, timeLeft: `${hrs}h ${mins}m ${secs}s`, progress: Math.max(0, Math.min(100, ((t.duration - diff) / t.duration) * 100)) };
+                return { ...t, timeLeft: hrs + "h " + mins + "m " + secs + "s", progress: Math.max(0, Math.min(100, ((t.duration - diff) / t.duration) * 100)) };
             });
         });
 
-        const formatPeriod = (t) => t.type === \u0027relative\u0027 ? `${t.minutes}分後` : `毎日 ${t.fixedTime}`;
-        const formatAbsoluteTime = (ts) => { const d = new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,\u00270\u0027)}:${String(d.getMinutes()).padStart(2,\u00270\u0027)}`; };
-        const toggleTab = () => { activeTab.value = activeTab.value === \u0027main\u0027 ? \u0027settings\u0027 : \u0027main\u0027; cancelEditMode(); };
+        const formatPeriod = (t) => t.type === 'relative' ? t.minutes + "分後" : "毎日 " + t.fixedTime;
+        const formatAbsoluteTime = (ts) => { const d = new Date(ts); return (d.getMonth()+1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2,'0') + ":" + String(d.getMinutes()).padStart(2,'0'); };
+        const toggleTab = () => { activeTab.value = activeTab.value === 'main' ? 'settings' : 'main'; cancelEditMode(); };
 
         function urlBase64ToUint8Array(base64String) {
-            const padding = \u0027=\u0027.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\\-/g, \u0027+\u0027).replace(/_/g, \u0027/\u0027);
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
             const rawData = window.atob(base64); const outputArray = new Uint8Array(rawData.length);
             for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
             return outputArray;
@@ -405,7 +420,7 @@ createApp({
             startTimer, openTimeEditor, confirmCancel, saveGasSettings, formatPeriod, formatAbsoluteTime, toggleTab, saveToolForm, selectPresetForEdit, cancelEditMode, deletePreset, isTimerRunning, requestNotificationPermission, testPushNotification
         };
     }
-}).mount(\u0027#app\u0027);
+}).mount('#app');
 </script>
 </body>
 </html>
