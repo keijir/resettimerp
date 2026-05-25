@@ -3,11 +3,11 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-comp
 
 // index.htmlと同じ設定値をここにも記述します
 const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyBEWkFXCVxrXONInlv0wdF2w0djz6MQKI0",
+    authDomain: "ai-reset-timer.firebaseapp.com",
+    projectId: "ai-reset-timer",
+    messagingSenderId: "43382846437",
+    appId: "1:43382846437:web:449416a4cad3c1c5e7b50c"
 };
 
 firebase.initializeApp(firebaseConfig);
