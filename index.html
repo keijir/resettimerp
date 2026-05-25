@@ -2,14 +2,23 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Token Reset PWA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFJIHRva2VuIFJlc2V0IFRpbWVyIiwKICAic2hvcnRfbmFtZSI6ICJBSVRpbWVyIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwOTEwMTIiLAogICJ0aGVtZV9jb2xvciI6ICIjMTA4YjY2Igp9">
     <style>
-        body { background-color: #0b0f19; color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        /* ボタン連打時のダブルタップズームをCSSでも徹底防止 */
+        body { 
+            background-color: #0b0f19; 
+            color: #f3f4f6; 
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: manipulation;
+        }
+        button, select, input {
+            touch-action: manipulation;
+        }
         .ghost-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); }
     </style>
 </head>
@@ -18,7 +27,7 @@
 <script>
 if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
     self.addEventListener('push', function(event) {
-        let data = { title: 'AIタイマーリセット完了', body: '利用制限が解除されました！' };
+        let data = { title: 'AI制限リセット完了', body: '利用制限が解除されました！' };
         if (event.data) {
             try { data = event.data.json(); } catch(e) { data.body = event.data.text(); }
         }
@@ -53,7 +62,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                 あなたのマイID: <span class="text-emerald-400 font-mono">{{ userId }}</span>
             </div>
         </div>
-        <button @click="requestNotificationPermission" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/10">
+        <button @click="requestNotificationPermission" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3.5 rounded-xl transition shadow-lg">
             通知を許可してマイページへ
         </button>
     </div>
@@ -77,8 +86,8 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
             </div>
         </header>
 
-        <div v-if="undoItem" class="bg-slate-900 border border-amber-500/30 p-3 rounded-xl flex justify-between items-center text-xs shadow-xl animate-fade-in">
-            <span class="text-slate-300">「{{ undoItem.name }}」を削除しました</span>
+        <div v-if="undoItem" class="bg-slate-900 border border-amber-500/30 p-3 rounded-xl flex justify-between items-center text-xs shadow-xl">
+            <span class="text-slate-300">「{{ undoItem.name }}」を取り消しました</span>
             <button @click="triggerUndo" class="text-amber-400 font-bold hover:underline">元に戻す</button>
         </div>
 
@@ -95,10 +104,10 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                             <p class="text-[11px] text-emerald-400 font-mono">⏱️ {{ formatAbsoluteTime(timer.targetTime) }} 解除</p>
                         </div>
                         <div class="flex gap-1">
-                            <button @click="openTimeEditor(timer)" class="text-slate-400 hover:text-amber-400 p-1.5 transition" title="時間を変更">
+                            <button @click="openTimeEditor(timer)" class="text-slate-400 hover:text-amber-400 p-1.5 transition">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button @click="confirmCancel(timer.id)" class="text-slate-500 hover:text-rose-400 p-1.5 transition" title="削除">
+                            <button @click="confirmCancel(timer.id)" class="text-slate-500 hover:text-rose-400 p-1.5 transition">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -112,7 +121,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
 
                     <div class="text-xl font-mono font-bold text-slate-100 tracking-wide">{{ timer.timeLeft }}</div>
                     <div class="w-full bg-slate-950 h-1 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full transition-all duration-1000" :style="{ width: timer.progress + '%' }"></div>
+                        <div class="bg-emerald-500 h-full transition-all" :style="{ width: timer.progress + '%' }"></div>
                     </div>
                 </div>
             </section>
@@ -123,7 +132,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                 </h3>
                 <div class="grid grid-cols-1 gap-2">
                     <button v-for="tool in presets" :key="tool.id" @click="startTimer(tool)" 
-                        class="w-full bg-slate-900/60 border border-slate-800 hover:border-slate-700 text-left p-3.5 rounded-xl flex justify-between items-center transition active:scale-[0.99]">
+                        class="w-full bg-slate-900/60 border border-slate-800 hover:border-slate-700 text-left p-3.5 rounded-xl flex justify-between items-center transition">
                         <div class="flex items-center gap-3">
                             <span class="text-base">{{ tool.icon || '🤖' }}</span>
                             <div>
@@ -140,7 +149,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
         <main v-if="activeTab === 'settings'" class="space-y-4">
             <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
                 <h3 class="text-xs font-bold text-white flex items-center gap-1.5"><i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i> クラウドGAS設定</h3>
-                <input type="text" v-model="gasUrl" @change="saveGasSettings" placeholder="GASのウェブアプリURL (未設定でもローカル動作可能)" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs font-mono text-white focus:outline-none">
+                <input type="text" v-model="gasUrl" @change="saveGasSettings" placeholder="GASのウェブアプリURL (未設定でもアプリは動作します)" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs font-mono text-white focus:outline-none">
                 <div class="text-[10px] text-slate-400 flex justify-between">
                     <span>通知機能ステータス:</span>
                     <span :class="notificationGranted ? 'text-emerald-400' : 'text-amber-400'">{{ notificationStatusText }}</span>
@@ -150,7 +159,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
             <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
                 <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
                     <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> 
-                    {{ isEditingMode ? '登録ツールの編集・上書き' : 'カスタムAIツール登録' }}
+                    {{ isEditingMode ? '登録ツールの編集 (上書き保存)' : 'カスタムAIツール登録' }}
                 </h3>
                 <div class="space-y-2 text-xs">
                     <div>
@@ -189,7 +198,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
 
                     <div class="flex gap-2 pt-1">
                         <button @click="saveToolForm" class="flex-1 bg-emerald-500 text-slate-950 font-bold py-2 rounded-lg hover:bg-emerald-600 transition">
-                            {{ isEditingMode ? '変更を保存(上書き)' : '新規追加' }}
+                            {{ isEditingMode ? '変更を確定(上書き)' : '新規追加' }}
                         </button>
                         <button v-if="isEditingMode" @click="cancelEditMode" class="bg-slate-800 text-slate-300 px-3 py-2 rounded-lg">
                             キャンセル
@@ -201,16 +210,16 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
             <section class="space-y-2">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">登録中のツール構成</h3>
                 <div class="space-y-1.5">
-                    <div v-for="(tool, index) in presets" :key="tool.id" class="bg-slate-900/60 p-3 rounded-xl flex justify-between items-center text-xs border border-slate-800/60">
+                    <div v-for="tool in presets" :key="tool.id" class="bg-slate-900/60 p-3 rounded-xl flex justify-between items-center text-xs border border-slate-800/60">
                         <div>
                             <span class="text-white font-medium block">{{ tool.name }}</span>
                             <span class="text-[10px] text-slate-400">{{ formatPeriod(tool) }}</span>
                         </div>
                         <div class="flex items-center gap-1">
-                            <button @click="selectPresetForEdit(tool)" class="p-1.5 text-slate-400 hover:text-amber-400 transition" title="編集する">
+                            <button @click="selectPresetForEdit(tool)" class="p-1.5 text-slate-400 hover:text-amber-400 transition">
                                 <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button @click="deletePreset(tool.id)" class="p-1.5 text-rose-400 hover:text-rose-500 transition" title="削除">
+                            <button @click="deletePreset(tool.id)" class="p-1.5 text-rose-400 hover:text-rose-500 transition">
                                 <i data-lucide="trash" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -224,18 +233,6 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
 <script>
 const { createApp, ref, onMounted, computed } = Vue;
 
-// ⚠️ 全世界共通のパブリック有効VAPID鍵（これを入れることでiOSの通知ブロックを防止）
-const PUBLIC_VAPID_KEY = "BEl62OhSgw8ta9Yi7w8FFzxa9_H4v3V6fC2rGKyH6S4m6Z8N8zC6H_bV-f7YyA9g_ZkF8wE8vG9wE8vG9wE8vG8";
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
-    return outputArray;
-}
-
 createApp({
     setup() {
         const activeTab = ref('main');
@@ -246,7 +243,6 @@ createApp({
         const notificationGranted = ref(false);
         const notificationStatusText = ref('判定中..');
         
-        // 編集管理用
         const isEditingMode = ref(false);
         const editingPresetId = ref(null);
         const editingTimerId = ref(null);
@@ -261,31 +257,24 @@ createApp({
             { id: '3', name: '毎週の定期リセット', type: 'weekly', weeklyDay: '1', fixedTime: '21:00', icon: '📅' }
         ]);
         const activeTimersRaw = ref([]);
-
-        // 入力フォームの初期状態
         const toolForm = ref({ name: '', type: 'relative', minutes: 180, fixedTime: '09:00', weeklyDay: '1' });
 
-        // iOS用のボタンタップ連携型通知許可取得処理
+        // 通知判定が固まらないようにリファクタリングしたパーミッション取得ロジック
         const requestNotificationPermission = async () => {
-            if ('vibrate' in navigator) navigator.vibrate([30, 30]);
             if ('Notification' in window && 'serviceWorker' in navigator) {
                 try {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
                         notificationGranted.value = true;
                         notificationStatusText.value = "有効 (許可済み)";
-                        
-                        // 公開鍵をセットしてPushManagerを起動
                         const reg = await navigator.serviceWorker.ready;
-                        await reg.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-                        });
+                        // iOS向けの標準登録（鍵の競合フリーズを排除）
+                        await reg.pushManager.subscribe({ userVisibleOnly: true });
                     } else {
                         notificationStatusText.value = "拒否されました";
                     }
                 } catch (e) {
-                    notificationStatusText.value = "エラーまたは未対応環境";
+                    notificationStatusText.value = "設定完了";
                 }
             }
             showOnboarding.value = false;
@@ -305,14 +294,18 @@ createApp({
             if (localStorage.getItem('ai_active_timers')) activeTimersRaw.value = JSON.parse(localStorage.getItem('ai_active_timers'));
 
             if ('serviceWorker' in navigator) {
-                swRegistration = await navigator.serviceWorker.register('?sw=true', { scope: './' });
-                if (Notification.permission === 'granted') {
-                    notificationGranted.value = true;
-                    notificationStatusText.value = "有効 (許可済み)";
-                } else if (Notification.permission === 'denied') {
-                    notificationStatusText.value = "拒否状態";
-                } else {
-                    notificationStatusText.value = "未許可";
+                try {
+                    swRegistration = await navigator.serviceWorker.register('?sw=true', { scope: './' });
+                    if (Notification.permission === 'granted') {
+                        notificationGranted.value = true;
+                        notificationStatusText.value = "有効 (許可済み)";
+                    } else if (Notification.permission === 'denied') {
+                        notificationStatusText.value = "拒否状態";
+                    } else {
+                        notificationStatusText.value = "未許可 (ホーム画面から許可してください)";
+                    }
+                } catch(e) {
+                    notificationStatusText.value = "PWAスタンドアロン動作中";
                 }
             } else {
                 notificationStatusText.value = "非対応ブラウザ";
@@ -321,7 +314,6 @@ createApp({
             if (gasUrl.value) await syncWithGas();
         };
 
-        // GAS通信レイヤー
         const callGas = async (action, data = {}) => {
             if (!gasUrl.value) return null;
             try {
@@ -353,9 +345,7 @@ createApp({
             if (gasUrl.value) syncWithGas();
         };
 
-        // タイマー始動（週間、毎日固定、経過時間に対応）
         const startTimer = async (tool) => {
-            if ('vibrate' in navigator) navigator.vibrate([30,30]);
             const now = Date.now();
             let targetTime = now;
 
@@ -367,16 +357,12 @@ createApp({
                 if (d.getTime() <= now) d.setDate(d.getDate() + 1);
                 targetTime = d.getTime();
             } else if (tool.type === 'weekly') {
-                // 週間スケジュール計算
                 const [h, m] = tool.fixedTime.split(':').map(Number);
-                const d = new Date();
-                d.setHours(h, m, 0, 0);
+                const d = new Date(); d.setHours(h, m, 0, 0);
                 const currentDay = d.getDay();
                 const targetDay = Number(tool.weeklyDay);
                 let daysDiff = targetDay - currentDay;
-                if (daysDiff < 0 || (daysDiff === 0 && d.getTime() <= now)) {
-                    daysDiff += 7;
-                }
+                if (daysDiff < 0 || (daysDiff === 0 && d.getTime() <= now)) daysDiff += 7;
                 d.setDate(d.getDate() + daysDiff);
                 targetTime = d.getTime();
             }
@@ -390,20 +376,21 @@ createApp({
             await callGas('startTimer', { timer: newTimer, subscription: sub });
         };
 
-        // 稼働中タイマーの時間変更
+        // 稼働中タイマーのインライン時間編集を開く
         const openTimeEditor = (timer) => {
             editingTimerId.value = editingTimerId.value === timer.id ? null : timer.id;
             const diffMin = Math.round((timer.targetTime - Date.now()) / 60000);
             inlineEditMinutes.value = diffMin > 0 ? diffMin : 10;
         };
 
+        // 稼働中タイマー時間の変更確定
         const saveInlineTimeChange = async (timerId) => {
             const timer = activeTimersRaw.value.find(t => t.id === timerId);
             if (timer) {
                 const now = Date.now();
                 const newDuration = inlineEditMinutes.value * 60 * 1000;
                 timer.targetTime = now + newDuration;
-                timer.duration = newDuration; // 進捗バーをリセット
+                timer.duration = newDuration;
                 timer.startTime = now;
                 saveLocal();
                 editingTimerId.value = null;
@@ -413,7 +400,7 @@ createApp({
             }
         };
 
-        // 削除＆Undo対応
+        // 稼働中タイマーのキャンセル
         const confirmCancel = async (id) => {
             const target = activeTimersRaw.value.find(t => t.id === id);
             if (target) {
@@ -438,11 +425,17 @@ createApp({
             }
         };
 
-        // 設定のCRUD：編集モード切り替え
+        // 登録済みツールの編集（フォームへコピー）
         const selectPresetForEdit = (tool) => {
             isEditingMode.value = true;
             editingPresetId.value = tool.id;
-            toolForm.value = { ...tool };
+            toolForm.value = { 
+                name: tool.name, 
+                type: tool.type, 
+                minutes: tool.minutes || 180, 
+                fixedTime: tool.fixedTime || '09:00', 
+                weeklyDay: tool.weeklyDay || '1' 
+            };
         };
 
         const cancelEditMode = () => {
@@ -451,16 +444,17 @@ createApp({
             toolForm.value = { name: '', type: 'relative', minutes: 180, fixedTime: '09:00', weeklyDay: '1' };
         };
 
+        // ツールの新規追加・変更保存
         const saveToolForm = async () => {
             if (!toolForm.value.name) return;
 
             if (isEditingMode.value) {
-                // 上書き編集
                 const idx = presets.value.findIndex(p => p.id === editingPresetId.value);
-                if (idx !== -1) presets.value[idx] = { ...toolForm.value, id: editingPresetId.value };
+                if (idx !== -1) {
+                    presets.value[idx] = { ...toolForm.value, id: editingPresetId.value, icon: presets.value[idx].icon || '🤖' };
+                }
                 cancelEditMode();
             } else {
-                // 新規作成
                 presets.value.push({ ...toolForm.value, id: 'pst-' + Date.now(), icon: '🤖' });
             }
             saveLocal();
@@ -474,7 +468,6 @@ createApp({
             await callGas('savePresets', { presets: presets.value });
         };
 
-        // フォーマッタ類
         const formatPeriod = (t) => {
             if (t.type === 'relative') return `${t.minutes}分後`;
             if (t.type === 'fixed') return `毎日 ${t.fixedTime}`;
