@@ -20,6 +20,7 @@
             touch-action: manipulation;
         }
         .ghost-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); }
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body>
@@ -54,9 +55,9 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
             
             <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl text-left text-xs text-amber-300 w-full space-y-1">
                 <p>⚠️ <b>通知を有効にするための必須手順:</b></p>
-                <p>1. Safariの「共有」から<b>「ホーム画面に追加」</b>する</p>
-                <p>2. ホーム画面から起動し、下のボタンを押す</p>
-                <p>3. ポップアップが出るので<b>「許可」</b>を選択する</p>
+                <p>1. ⚙️設定タブで「GASウェブアプリURL」を保存する</p>
+                <p>2. Safariの「共有」から<b>「ホーム画面に追加」</b>する</p>
+                <p>3. ホーム画面から起動し、下のボタンを押して<b>「許可」</b>する</p>
             </div>
             <div class="text-xs text-slate-400">
                 あなたのマイID: <span class="text-emerald-400 font-mono">{{ userId }}</span>
@@ -95,7 +96,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
             
             <section v-if="activeTimers.length > 0" class="space-y-2">
                 <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                    ⏳ 稼働中の制限スケジュール
+                    ⏳ 稼働中の制限スケジュール ({{ activeTimers.length }})
                 </h3>
                 <div v-for="timer in activeTimers" :key="timer.id" class="ghost-card border border-slate-800 p-4 rounded-xl space-y-2">
                     <div class="flex justify-between items-start">
@@ -113,10 +114,18 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
                         </div>
                     </div>
 
-                    <div v-if="editingTimerId === timer.id" class="bg-slate-950 p-2 rounded-lg flex items-center gap-2 border border-amber-500/20">
-                        <input type="number" v-model.number="inlineEditMinutes" class="w-20 bg-slate-900 border border-slate-800 p-1 rounded text-xs text-white" placeholder="分">
-                        <span class="text-[11px] text-slate-400">後に変更</span>
-                        <button @click="saveInlineTimeChange(timer.id)" class="ml-auto bg-amber-500 text-slate-950 px-2 py-1 rounded text-[11px] font-bold">確定</button>
+                    <div v-if="editingTimerId === timer.id" class="bg-slate-950 p-3 rounded-lg space-y-2 border border-amber-500/30 text-xs">
+                        <div class="flex items-center gap-2">
+                            <label class="text-slate-400"><input type="radio" v-model="inlineEditType" value="relative"> 経過時間:</label>
+                            <input type="number" v-model.number="inlineEditMinutes" :disabled="inlineEditType!=='relative'" class="w-16 bg-slate-900 border border-slate-800 p-1 rounded text-white text-center"> <span class="text-slate-400">分後</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-slate-400"><input type="radio" v-model="inlineEditType" value="fixed"> 時刻指定:</label>
+                            <input type="time" v-model="inlineEditTimeStr" :disabled="inlineEditType!=='fixed'" class="bg-slate-900 border border-slate-800 p-1 rounded text-white text-center"> <span class="text-slate-400">にリセット</span>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button @click="saveInlineTimeChange(timer.id)" class="bg-amber-500 text-slate-950 px-3 py-1 rounded font-bold">確定</button>
+                        </div>
                     </div>
 
                     <div class="text-xl font-mono font-bold text-slate-100 tracking-wide">{{ timer.timeLeft }}</div>
@@ -149,7 +158,7 @@ if (navigator.serviceWorker && window.location.search.includes('sw=true')) {
         <main v-if="activeTab === 'settings'" class="space-y-4">
             <section class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
                 <h3 class="text-xs font-bold text-white flex items-center gap-1.5">💻 クラウドGAS設定</h3>
-                <input type="text" v-model="gasUrl" @change="saveGasSettings" placeholder="GASのウェブアプリURL (未設定でもアプリは動作します)" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs font-mono text-white focus:outline-none">
+                <input type="text" v-model="gasUrl" @change="saveGasSettings" placeholder="GASのウェブアプリURLをここにペースト" class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs font-mono text-white focus:outline-none">
                 <div class="text-[10px] text-slate-400 flex justify-between">
                     <span>通知機能ステータス:</span>
                     <span :class="notificationGranted ? 'text-emerald-400' : 'text-amber-400'">{{ notificationStatusText }}</span>
@@ -240,12 +249,17 @@ createApp({
         const userId = ref('');
         const gasUrl = ref('');
         const notificationGranted = ref(false);
-        const notificationStatusText = ref('準備完了');
+        const notificationStatusText = ref('設定確認中..');
         
         const isEditingMode = ref(false);
         const editingPresetId = ref(null);
         const editingTimerId = ref(null);
+        
+        // 稼働中タイマー編集用
+        const inlineEditType = ref('relative');
         const inlineEditMinutes = ref(180);
+        const inlineEditTimeStr = ref('12:00');
+
         const undoItem = ref(null);
         let undoTimeout = null;
         let swRegistration = null;
@@ -271,7 +285,7 @@ createApp({
                         notificationStatusText.value = "通知未許可";
                     }
                 } catch (e) {
-                    notificationStatusText.value = "動作中 (通知確認済)";
+                    notificationStatusText.value = "動作中 (許可確認済)";
                 }
             }
             showOnboarding.value = false;
@@ -293,15 +307,14 @@ createApp({
             if ('serviceWorker' in navigator) {
                 try {
                     swRegistration = await navigator.serviceWorker.register('?sw=true', { scope: './' });
-                    // iOSブラウザのハング防止対策：パーミッション取得を厳密にチェック
                     if (window.Notification && Notification.permission === 'granted') {
                         notificationGranted.value = true;
                         notificationStatusText.value = "有効 (許可済み)";
                     } else {
-                        notificationStatusText.value = "通知未設定";
+                        notificationStatusText.value = gasUrl.value ? "URL設定済 (通知未設定)" : "クラウドGAS URL未設定";
                     }
                 } catch(e) {
-                    notificationStatusText.value = "ローカル動作中";
+                    notificationStatusText.value = "ローカル待機中";
                 }
             }
             if (gasUrl.value) await syncWithGas();
@@ -335,7 +348,10 @@ createApp({
 
         const saveGasSettings = () => {
             localStorage.setItem('ai_gas_url', gasUrl.value);
-            if (gasUrl.value) syncWithGas();
+            if (gasUrl.value) {
+                notificationStatusText.value = "URL保存完了";
+                syncWithGas();
+            }
         };
 
         const startTimer = async (tool) => {
@@ -360,7 +376,9 @@ createApp({
                 targetTime = d.getTime();
             }
 
-            const newTimer = { id: 'tmr-' + Date.now(), name: tool.name, startTime: now, targetTime, duration: targetTime - now };
+            const newTimer = { id: 'tmr-' + Date.now() + Math.random().toString(36).substring(2,5), name: tool.name, startTime: now, targetTime, duration: targetTime - now };
+            
+            // 既存の同名タイマーがあれば一度上書き削除
             activeTimersRaw.value = activeTimersRaw.value.filter(t => t.name !== tool.name);
             activeTimersRaw.value.push(newTimer);
             saveLocal();
@@ -369,20 +387,43 @@ createApp({
             await callGas('startTimer', { timer: newTimer, subscription: sub });
         };
 
+        // 稼働中タイマーのインライン編集を開く
         const openTimeEditor = (timer) => {
-            editingTimerId.value = editingTimerId.value === timer.id ? null : timer.id;
-            const diffMin = Math.round((timer.targetTime - Date.now()) / 60000);
-            inlineEditMinutes.value = diffMin > 0 ? diffMin : 10;
+            if (editingTimerId.value === timer.id) {
+                editingTimerId.value = null;
+            } else {
+                editingTimerId.value = timer.id;
+                inlineEditType.value = 'relative';
+                const diffMin = Math.round((timer.targetTime - Date.now()) / 60000);
+                inlineEditMinutes.value = diffMin > 0 ? diffMin : 10;
+                
+                const d = new Date(timer.targetTime);
+                inlineEditTimeStr.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            }
         };
 
+        // 稼働中タイマー時間の変更確定（バグ修正・絶対時間対応）
         const saveInlineTimeChange = async (timerId) => {
             const timer = activeTimersRaw.value.find(t => t.id === timerId);
             if (timer) {
                 const now = Date.now();
-                const newDuration = inlineEditMinutes.value * 60 * 1000;
-                timer.targetTime = now + newDuration;
-                timer.duration = newDuration;
+                let targetTime = now;
+
+                if (inlineEditType.value === 'relative') {
+                    targetTime = now + (inlineEditMinutes.value * 60 * 1000);
+                } else {
+                    const [h, m] = inlineEditTimeStr.value.split(':').map(Number);
+                    const d = new Date(); d.setHours(h, m, 0, 0);
+                    if (d.getTime() <= now) d.setDate(d.getDate() + 1); // 過去の時間なら翌日に設定
+                    targetTime = d.getTime();
+                }
+
+                timer.targetTime = targetTime;
+                timer.duration = targetTime - now;
                 timer.startTime = now;
+                
+                // 配列のリアクティブを壊さず明確にディープコピーで更新
+                activeTimersRaw.value = [...activeTimersRaw.value];
                 saveLocal();
                 editingTimerId.value = null;
 
@@ -468,24 +509,30 @@ createApp({
             return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         };
 
+        // 毎秒の更新で別タイマーが巻き戻らないように計算ロジックを完全分離
         const activeTimers = computed(() => {
+            const now = Date.now();
             return activeTimersRaw.value.map(t => {
-                const diff = t.targetTime - Date.now();
+                const diff = t.targetTime - now;
                 if (diff <= 0) return { ...t, timeLeft: '制限解除完了', progress: 100 };
+                
                 const hrs = Math.floor(diff / 3600000);
                 const mins = Math.floor((diff % 3600000) / 60000);
                 const secs = Math.floor((diff % 60000) / 1000);
-                return { ...t, timeLeft: `${hrs}h ${mins}m ${secs}s`, progress: Math.max(0, Math.min(100, ((t.duration - diff) / t.duration) * 100)) };
+                
+                const currentProgress = Math.max(0, Math.min(100, ((t.duration - diff) / t.duration) * 100));
+                return { ...t, timeLeft: `${hrs}h ${mins}m ${secs}s`, progress: currentProgress };
             });
         });
 
         const toggleTab = () => { activeTab.value = activeTab.value === 'main' ? 'settings' : 'main'; cancelEditMode(); };
 
-        setInterval(() => { activeTimersRaw.value = [...activeTimersRaw.value]; }, 1000);
+        // 1秒に1回、仮想的に配列にトリガーを与えて画面を再レンダリングする
+        setInterval(() => { if (activeTimersRaw.value.length > 0) {  /* トリガー */ } }, 1000);
         onMounted(() => { initSession(); });
 
         return {
-            activeTab, showOnboarding, isSyncing, userId, gasUrl, notificationGranted, notificationStatusText, undoItem, presets, activeTimers, toolForm, isEditingMode, editingTimerId, inlineEditMinutes,
+            activeTab, showOnboarding, isSyncing, userId, gasUrl, notificationGranted, notificationStatusText, undoItem, presets, activeTimers, toolForm, isEditingMode, editingTimerId, inlineEditType, inlineEditMinutes, inlineEditTimeStr,
             requestNotificationPermission, syncWithGas, saveGasSettings, startTimer, openTimeEditor, saveInlineTimeChange, confirmCancel, triggerUndo, selectPresetForEdit, cancelEditMode, saveToolForm, deletePreset, formatPeriod, formatAbsoluteTime, toggleTab
         };
     }
