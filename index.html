@@ -114,9 +114,8 @@
 
 <script>
 // ==========================================
-// ⚙️ Firebase 接続用初期設定（ご自身のプロジェクト情報に書き換えてください）
+// ⚙️ Firebase 接続設定
 // ==========================================
-// 1. Firebaseの初期化（露出しても安全な公開情報）
 const firebaseConfig = {
     apiKey: "AIzaSyBEWkFXCVxrXONInlv0wdF2w0djz6MQKI0",
     authDomain: "ai-reset-timer.firebaseapp.com",
@@ -126,6 +125,18 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
+
+// VAPID変換関数（エラー防止のため一番安全な最上部に定義）
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
 
 const { createApp, ref, onMounted, computed } = Vue;
 
@@ -173,42 +184,33 @@ createApp({
             else { notificationStatusText.value = "URL保存完了（未同期）"; }
         };
 
-        // 🛠️ 【修正箇所】useServiceWorkerを完全に除外し、最新の引数形式に書き換えました
         const setupFirebasePush = async () => {
             if (!gasUrl.value || !('serviceWorker' in navigator)) return;
 
             try {
-                // 1. サービスワーカーの登録確認
+                // 1. サービスワーカー登録
                 const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-                console.log("Firebaseサービスワーカー登録成功:", reg);
+                console.log("Firebaseサービスワーカー登録成功");
 
-                // 2. VAPIDキーのクレンジング処理
+                // 2. VAPIDキーのクレンジングと変換
                 const rawVapidKey = 'BIelJEP1QAPB--9ImzdzE_frQcwV9E6N5RmjiGWqzmi8F9aZkAzec1pwzsziQzq8r_ibmfYNGoqnxBhcsVwdWD8'; // 👈 ご自身の公開鍵
-                
-                // コピペミス（前後の空白やクォーテーションの重複）を自動で排除
                 const cleanVapidKey = rawVapidKey.trim().replace(/^['"]|['"]$/g, '');
                 
                 if (cleanVapidKey.includes('YOUR_FIREBASE')) {
-                    alert('注意: VAPIDキーが初期値のままです。Firebaseコンソールの鍵に書き換えてください。');
+                    console.warn('VAPIDキーが初期値のままです。');
                     return;
                 }
 
-                // 3. ブラウザ標準の形式に変換
                 const convertedVapidKey = urlBase64ToUint8Array(cleanVapidKey);
 
-                // 4. Firebaseを介さず、ブラウザのPushManagerを直接叩いて検証する
-                console.log("ブラウザ標準のPushManagerで購読を開始します...");
-                const nativeSubscription = await reg.pushManager.subscribe({
+                // 3. ブラウザ標準のPushManagerを直接叩いて検証（デバッグ兼ねる）
+                await reg.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: convertedVapidKey
-                }).catch(nativeErr => {
-                    console.error("【重大】ブラウザ標準機能の時点で鍵が拒否されました:", nativeErr);
-                    throw nativeErr;
                 });
-                
-                console.log("ブラウザ標準の購読に成功しました。続けてFirebaseトークンに変換します。");
+                console.log("ブラウザのPush購読完了");
 
-                // 5. 変換されたきれいな鍵を使ってFCMトークンを発行
+                // 4. Firebaseトークンに変換
                 const currentToken = await messaging.getToken({ 
                     vapidKey: cleanVapidKey,
                     serviceWorkerRegistration: reg
@@ -217,6 +219,7 @@ createApp({
                 if (currentToken) {
                     console.log("FCMトークン取得成功:", currentToken);
                     
+                    // GASへ送信
                     await fetch(gasUrl.value, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -228,7 +231,7 @@ createApp({
                     localStorage.setItem('ai_fcm_linked', 'true');
                     updateStatusText();
                 } else {
-                    console.warn('トークンが空です。');
+                    console.warn('FCMトークンが空です。');
                 }
             } catch (err) {
                 console.error("FCM同期エラー詳細ログ:", err);
@@ -236,8 +239,6 @@ createApp({
                 notificationStatusText.value = "同期失敗 (再試行してください)";
             }
         };
-
-        // ※原因①で提示したurlBase64ToUint8Array関数も合わせてsetup()内のどこかに記述してください
 
         const saveGasSettings = async () => {
             if (!gasUrl.value) return;
